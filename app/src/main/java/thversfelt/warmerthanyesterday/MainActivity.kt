@@ -11,16 +11,13 @@ import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.android.volley.Request
-import com.android.volley.Response
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
-import thversfelt.warmerthanyesterday.data.today.TodayData
-import thversfelt.warmerthanyesterday.data.yesterday.YesterdayData
 import com.google.android.gms.ads.*
 import com.google.android.gms.location.*
 import com.google.gson.Gson
-import kotlinx.android.synthetic.main.activity_main.*
-import java.util.*
+import thversfelt.warmerthanyesterday.data.WeatherData
+import thversfelt.warmerthanyesterday.databinding.ActivityMainBinding
 import kotlin.math.*
 
 class MainActivity : AppCompatActivity() {
@@ -29,21 +26,23 @@ class MainActivity : AppCompatActivity() {
     private val AD_UNIT_ID = "ca-app-pub-3934499255955132/7364274492"
     private lateinit var adView: AdView
     private var initialLayoutComplete = false
-    private val adSize: AdSize get() {
-        val display = windowManager.defaultDisplay
-        val outMetrics = DisplayMetrics()
-        display.getMetrics(outMetrics)
+    private val adSize: AdSize
+        get() {
+            val display = windowManager.defaultDisplay
+            val outMetrics = DisplayMetrics()
+            display.getMetrics(outMetrics)
 
-        val density = outMetrics.density
+            val density = outMetrics.density
 
-        var adWidthPixels = ad_view_container.width.toFloat()
-        if (adWidthPixels == 0f) {
-            adWidthPixels = outMetrics.widthPixels.toFloat()
+            var adWidthPixels = binding.adViewContainer.width.toFloat()
+            if (adWidthPixels == 0f) {
+                adWidthPixels = outMetrics.widthPixels.toFloat()
+            }
+
+            val adWidth = (adWidthPixels / density).toInt()
+            return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, adWidth)
         }
 
-        val adWidth = (adWidthPixels / density).toInt()
-        return AdSize.getCurrentOrientationBannerAdSizeWithWidth(this, adWidth)
-    }
 
     // Location-related variables.
     private lateinit var locationProvider: FusedLocationProviderClient
@@ -56,7 +55,6 @@ class MainActivity : AppCompatActivity() {
     private val PERMISSIONS_REQUEST_CODE = 999
 
     // Temperature-related variables.
-    private val API_KEY = "1bdf4bc9ba804590eb9e692abfbbaadd"
     private var yesterdayFeelsLikeValue = -1.0
     private var todayFeelsLikeValue = -1.0
     private val COLD_COLOR = "#2980B9"
@@ -65,9 +63,16 @@ class MainActivity : AppCompatActivity() {
     // Preferences-related variables.
     private val NAME_OF_PREFERENCES = "z5mw0ttojm"
 
+    // Date-related variables.
+    private val SECONDS_IN_DAY = 86400
+
+    // Miscellaneous variables.
+    private lateinit var binding: ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
 
         // Initialize the UI.
         initializeUI()
@@ -80,40 +85,33 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun callAPI() {
-        val dt = millisToUnix(getYesterdayTimeInMillis())
         val lat = latitude
         val lon = longitude
+        val today = System.currentTimeMillis() / 1000L
+        val yesterday = today - SECONDS_IN_DAY
+        val applicationInfo = applicationContext.packageManager.getApplicationInfo(applicationContext.packageName, PackageManager.GET_META_DATA)
+        val key = applicationInfo.metaData["API_KEY"]
 
-        // Instantiate the RequestQueue.
-        val queue = Volley.newRequestQueue(this)
+        // Instantiate the request queue.
+        val requestQueue = Volley.newRequestQueue(this)
 
-        // Request a string response from the provided URL.
-        val yesterdayDataURL = "https://api.openweathermap.org/data/2.5/onecall/timemachine?lat=$lat&lon=$lon&dt=$dt&appid=$API_KEY"
-        val yesterdayDataRequest = StringRequest( Request.Method.GET, yesterdayDataURL,
+        // Construct the API call.
+        val apiURL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/$lat,$lon/$yesterday/$today?key=$key"
+        val apiCall = StringRequest( Request.Method.GET, apiURL,
                 { response ->
-                    val yesterdayData = Gson().fromJson(response, YesterdayData::class.java)
-                    val yesterdayFeelsLike = yesterdayData.hourly.maxBy { it.feels_like }
-                    yesterdayFeelsLikeValue = yesterdayFeelsLike?.feels_like!!
-                    if (todayFeelsLikeValue >= 0) updateUI()
+                    val weatherData = Gson().fromJson(response, WeatherData::class.java)
+                    yesterdayFeelsLikeValue = weatherData.days.first().feelslike
+                    todayFeelsLikeValue = weatherData.days.last().feelslike
+                    updateUI()
                 }, {}
         )
 
-        val todayDataURL = "https://api.openweathermap.org/data/2.5/onecall?lat=$lat&lon=$lon&appid=$API_KEY"
-        val todayDataRequest = StringRequest( Request.Method.GET, todayDataURL,
-                { response ->
-                    val todayData = Gson().fromJson(response, TodayData::class.java)
-                    val todayFeelsLike = todayData.hourly.subList(0, 23).maxBy { it.feels_like }
-                    todayFeelsLikeValue = todayFeelsLike?.feels_like!!
-                    if (yesterdayFeelsLikeValue >= 0) updateUI()
-                }, {}
-        )
-
-        // Add the request to the RequestQueue.
-        queue.add(yesterdayDataRequest)
-        queue.add(todayDataRequest)
+        // Add the api call to the request queue.
+        requestQueue.add(apiCall)
     }
 
     private fun initializeUI() {
+
         // Hide the action bar.
         supportActionBar?.hide()
         val metricSwitch = findViewById<Switch>(R.id.metric_switch)
@@ -139,8 +137,11 @@ class MainActivity : AppCompatActivity() {
         val metric = settings.getBoolean("metric", false)
         val temperatureScale = if (metric) "C" else "F"
 
-        var yesterdayFeelsLikeValueInt = kelvinToTemperatureScale(yesterdayFeelsLikeValue, metric).roundToInt()
-        var todayFeelsLikeValueInt = kelvinToTemperatureScale(todayFeelsLikeValue, metric).roundToInt()
+        val yesterdayFeelsLikeValueConverted = if (metric) fahrenheitToCelsius(yesterdayFeelsLikeValue) else yesterdayFeelsLikeValue
+        val todayFeelsLikeValueConverted = if (metric) fahrenheitToCelsius(todayFeelsLikeValue) else todayFeelsLikeValue
+
+        val yesterdayFeelsLikeValueInt = yesterdayFeelsLikeValueConverted.roundToInt()
+        val todayFeelsLikeValueInt = todayFeelsLikeValueConverted.roundToInt()
         val changeFeelsLikeValueInt = todayFeelsLikeValueInt - yesterdayFeelsLikeValueInt
 
         val warmerThanYesterday = (changeFeelsLikeValueInt >= 0)
@@ -157,6 +158,7 @@ class MainActivity : AppCompatActivity() {
             yesterdayFeelsLikeText.setBackgroundColor(Color.parseColor(WARM_COLOR))
             todayFeelsLikeText.setBackgroundColor(Color.parseColor(COLD_COLOR))
         }
+
         yesterdayFeelsLikeText.text = "$yesterdayFeelsLikeValueInt° $temperatureScale"
         todayFeelsLikeText.text = "$todayFeelsLikeValueInt° $temperatureScale"
     }
@@ -179,8 +181,8 @@ class MainActivity : AppCompatActivity() {
     private fun initializeAds() {
         MobileAds.initialize(this) { }
         adView = AdView(this)
-        ad_view_container.addView(adView)
-        ad_view_container.viewTreeObserver.addOnGlobalLayoutListener {
+        binding.adViewContainer.addView(adView)
+        binding.adViewContainer.viewTreeObserver.addOnGlobalLayoutListener {
             if (!initialLayoutComplete) {
                 initialLayoutComplete = true
                 loadBanner()
@@ -189,29 +191,24 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadBanner() {
-        adView.adUnitId = AD_UNIT_ID
+        adView.adUnitId = TEST_AD_UNIT_ID
         adView.adSize = adSize
         val adRequest = AdRequest.Builder().build()
         adView.loadAd(adRequest)
     }
 
     private fun initializeLocation() {
-        locationProvider = LocationServices.getFusedLocationProviderClient(this);
-        locationRequest = LocationRequest.create();
-        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY;
-        locationRequest.interval = 10 * 1000;
-        locationRequest.fastestInterval = 5 * 1000;
+        locationProvider = LocationServices.getFusedLocationProviderClient(this)
+        locationRequest = LocationRequest.create()
+        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
+        locationRequest.interval = 10 * 1000
+        locationRequest.fastestInterval = 5 * 1000
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
-                if (locationResult == null) {
-                    return
-                }
                 for (location in locationResult.locations) {
                     if (location != null) {
                         getLocation()
-                        if (locationProvider != null) {
-                            locationProvider.removeLocationUpdates(locationCallback)
-                        }
+                        locationProvider.removeLocationUpdates(locationCallback)
                     }
                 }
             }
@@ -245,7 +242,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 else {
                     // Last known location is null, so request location updates.
-                    locationProvider.requestLocationUpdates(locationRequest, locationCallback, null);
+                    locationProvider.requestLocationUpdates(locationRequest, locationCallback, null)
                 }
             }
         }
@@ -263,29 +260,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
 
-    private fun getYesterdayTimeInMillis(): Long {
-        val midnightCalender = Calendar.getInstance()
-        midnightCalender[Calendar.HOUR_OF_DAY] = 0
-        midnightCalender[Calendar.MINUTE] = 0
-        midnightCalender[Calendar.SECOND] = 0
-        return midnightCalender.timeInMillis - 1000;
-    }
-
-    private fun millisToUnix(timeInMillis: Long): Long {
-        return timeInMillis / 1000L
-    }
-
-    private fun kelvinToTemperatureScale(temp: Double, metric: Boolean): Double {
-        if (metric) return kelvinToCelcius(temp) else return kelvinToFahrenheit(temp)
-    }
-
-    private fun kelvinToCelcius(temp: Double): Double {
-        return temp - 273.15
-    }
-
-    private fun kelvinToFahrenheit(tempInKelvin: Double): Double {
-        return (tempInKelvin - 273.15) * 9.0 / 5.0 + 32
+    private fun fahrenheitToCelsius(temp: Double): Double {
+        return (temp - 32.0) * 5.0 / 9.0
     }
 }
