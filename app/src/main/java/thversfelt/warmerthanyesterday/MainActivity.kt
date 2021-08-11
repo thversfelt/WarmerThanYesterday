@@ -6,19 +6,33 @@ import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
 import android.util.DisplayMetrics
-import android.widget.Switch
-import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.android.volley.Request
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import com.github.mikephil.charting.data.BarData
 import com.google.android.gms.ads.*
 import com.google.android.gms.location.*
 import com.google.gson.Gson
 import thversfelt.warmerthanyesterday.data.WeatherData
 import thversfelt.warmerthanyesterday.databinding.ActivityMainBinding
 import kotlin.math.*
+import com.github.mikephil.charting.data.BarDataSet
+import com.github.mikephil.charting.data.BarEntry;
+import java.util.*
+import kotlin.collections.ArrayList
+import com.github.mikephil.charting.components.XAxis.XAxisPosition
+
+import com.github.mikephil.charting.components.XAxis
+import com.github.mikephil.charting.formatter.ValueFormatter
+
+
+
+
+
+
+
 
 class MainActivity : AppCompatActivity() {
     // Ad-related variables.
@@ -34,7 +48,7 @@ class MainActivity : AppCompatActivity() {
 
             val density = outMetrics.density
 
-            var adWidthPixels = binding.adViewContainer.width.toFloat()
+            var adWidthPixels = ui.adViewContainer.width.toFloat()
             if (adWidthPixels == 0f) {
                 adWidthPixels = outMetrics.widthPixels.toFloat()
             }
@@ -48,8 +62,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var locationProvider: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
     private lateinit var locationCallback: LocationCallback
-    private var latitude: Double = 0.0
-    private var longitude: Double = 0.0
+    private var latitude = 0.0
+    private var longitude = 0.0
 
     // Permissions-related variables.
     private val PERMISSIONS_REQUEST_CODE = 999
@@ -60,6 +74,12 @@ class MainActivity : AppCompatActivity() {
     private val COLD_COLOR = "#2980B9"
     private val WARM_COLOR = "#e74c3c"
 
+    // Precipitation-related variables.
+    private val precipitation = ArrayList<Double>()
+    private val LIGHT_RAIN_MAX = 0.098 // Inch/hour
+    private val MODERATE_RAIN_MAX = 0.300 // Inch/hour
+    private val HEAVY_RAIN_MAX = 2.000 // Inch/hour
+
     // Preferences-related variables.
     private val NAME_OF_PREFERENCES = "z5mw0ttojm"
 
@@ -67,12 +87,12 @@ class MainActivity : AppCompatActivity() {
     private val SECONDS_IN_DAY = 86400
 
     // Miscellaneous variables.
-    private lateinit var binding: ActivityMainBinding
+    private lateinit var ui: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
+        ui = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(ui.root)
 
         // Initialize the UI.
         initializeUI()
@@ -85,8 +105,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun callAPI() {
-        val lat = latitude
-        val lon = longitude
+        val lat = 55.860916 // latitude
+        val lon = -4.251433 // longitude
         val today = System.currentTimeMillis() / 1000L
         val yesterday = today - SECONDS_IN_DAY
         val applicationInfo = applicationContext.packageManager.getApplicationInfo(applicationContext.packageName, PackageManager.GET_META_DATA)
@@ -95,32 +115,25 @@ class MainActivity : AppCompatActivity() {
         // Instantiate the request queue.
         val requestQueue = Volley.newRequestQueue(this)
 
-        // Construct the API call.
+        // Perform the API call.
         val apiURL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/$lat,$lon/$yesterday/$today?key=$key"
-        val apiCall = StringRequest( Request.Method.GET, apiURL,
-                { response ->
-                    val weatherData = Gson().fromJson(response, WeatherData::class.java)
-                    yesterdayFeelsLikeValue = weatherData.days.first().feelslike
-                    todayFeelsLikeValue = weatherData.days.last().feelslike
-                    updateUI()
-                }, {}
-        )
+        val apiCall = StringRequest(Request.Method.GET, apiURL, {response -> onResponseAPI(response)}, {})
 
         // Add the api call to the request queue.
         requestQueue.add(apiCall)
     }
 
     private fun initializeUI() {
+        supportActionBar?.hide() // Hide the action bar.
+        initializeMetricSwitch()
+        initializePrecipitationChart()
+    }
 
-        // Hide the action bar.
-        supportActionBar?.hide()
-        val metricSwitch = findViewById<Switch>(R.id.metric_switch)
-
+    private fun initializeMetricSwitch() {
         val settings = getSharedPreferences(NAME_OF_PREFERENCES, 0)
         val metric = settings.getBoolean("metric", false)
-        if (metric) metricSwitch.isChecked = true
-
-        metricSwitch.setOnCheckedChangeListener { _, isChecked ->
+        if (metric) ui.metricSwitch.isChecked = true
+        ui.metricSwitch.setOnCheckedChangeListener { _, isChecked ->
             val editor = settings.edit()
             editor.putBoolean("metric", isChecked)
             editor.apply()
@@ -128,11 +141,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateUI() {
-        val changeFeelsLikeText = findViewById<TextView>(R.id.change_feels_like)
-        val yesterdayFeelsLikeText = findViewById<TextView>(R.id.yesterday_feels_like)
-        val todayFeelsLikeText = findViewById<TextView>(R.id.today_feels_like)
+    private fun initializePrecipitationChart() {
+        ui.precipitationChart.description.isEnabled = false
+        ui.precipitationChart.legend.isEnabled = false
 
+        ui.precipitationChart.setPinchZoom(false)
+        ui.precipitationChart.setTouchEnabled(false)
+        ui.precipitationChart.isDoubleTapToZoomEnabled = false
+
+        ui.precipitationChart.setDrawBarShadow(false)
+        ui.precipitationChart.setDrawGridBackground(false)
+
+        ui.precipitationChart.xAxis.isEnabled = true
+        ui.precipitationChart.xAxis.labelCount = 24
+        ui.precipitationChart.xAxis.position = XAxisPosition.BOTTOM
+        ui.precipitationChart.xAxis.setDrawGridLines(false)
+
+        ui.precipitationChart.axisLeft.isEnabled = true
+        ui.precipitationChart.axisLeft.setDrawGridLines(true)
+        ui.precipitationChart.axisLeft.setDrawLabels(true)
+        ui.precipitationChart.axisLeft.setDrawAxisLine(false)
+
+        val settings = getSharedPreferences(NAME_OF_PREFERENCES, 0)
+        val metric = settings.getBoolean("metric", false)
+        val formatter = object : ValueFormatter() {
+            override fun getFormattedValue(value: Float): String {
+                val percip = if (metric) millimetersToInches(value.toDouble()).toFloat() else value
+                if (percip < LIGHT_RAIN_MAX) return "Light"
+                else if (percip >= LIGHT_RAIN_MAX && percip < MODERATE_RAIN_MAX) return "Moderate"
+                else if (percip >= MODERATE_RAIN_MAX && percip < HEAVY_RAIN_MAX) return "Heavy"
+                else return "Violent"
+            }
+        }
+        ui.precipitationChart.axisLeft.valueFormatter = formatter;
+
+        ui.precipitationChart.axisRight.isEnabled = false
+        ui.precipitationChart.axisRight.setDrawGridLines(false)
+        ui.precipitationChart.axisRight.setDrawLabels(false)
+
+        ui.precipitationChart.invalidate()
+    }
+
+    private fun updateUI() {
+        updateTemperatureUI()
+        updatePrecipitationUI()
+    }
+
+    private fun updateTemperatureUI() {
         val settings = getSharedPreferences(NAME_OF_PREFERENCES, 0)
         val metric = settings.getBoolean("metric", false)
         val temperatureScale = if (metric) "C" else "F"
@@ -146,21 +201,49 @@ class MainActivity : AppCompatActivity() {
 
         val warmerThanYesterday = (changeFeelsLikeValueInt >= 0)
         if (warmerThanYesterday) {
-            changeFeelsLikeText.text = "$changeFeelsLikeValueInt° $temperatureScale Warmer"
-            changeFeelsLikeText.setBackgroundColor(Color.parseColor(WARM_COLOR))
-            yesterdayFeelsLikeText.setBackgroundColor(Color.parseColor(COLD_COLOR))
-            todayFeelsLikeText.setBackgroundColor(Color.parseColor(WARM_COLOR))
+            ui.changeFeelsLike.text = "$changeFeelsLikeValueInt° $temperatureScale Warmer"
+            ui.changeFeelsLike.setBackgroundColor(Color.parseColor(WARM_COLOR))
+            ui.yesterdayFeelsLike.setBackgroundColor(Color.parseColor(COLD_COLOR))
+            ui.todayFeelsLike.setBackgroundColor(Color.parseColor(WARM_COLOR))
         }
         else {
             val changeFeelsLikeValueIntAbs = abs(changeFeelsLikeValueInt)
-            changeFeelsLikeText.text = "$changeFeelsLikeValueIntAbs° $temperatureScale Colder"
-            changeFeelsLikeText.setBackgroundColor(Color.parseColor(COLD_COLOR))
-            yesterdayFeelsLikeText.setBackgroundColor(Color.parseColor(WARM_COLOR))
-            todayFeelsLikeText.setBackgroundColor(Color.parseColor(COLD_COLOR))
+            ui.changeFeelsLike.text = "$changeFeelsLikeValueIntAbs° $temperatureScale Colder"
+            ui.changeFeelsLike.setBackgroundColor(Color.parseColor(COLD_COLOR))
+            ui.yesterdayFeelsLike.setBackgroundColor(Color.parseColor(WARM_COLOR))
+            ui.todayFeelsLike.setBackgroundColor(Color.parseColor(COLD_COLOR))
         }
 
-        yesterdayFeelsLikeText.text = "$yesterdayFeelsLikeValueInt° $temperatureScale"
-        todayFeelsLikeText.text = "$todayFeelsLikeValueInt° $temperatureScale"
+        ui.yesterdayFeelsLike.text = "$yesterdayFeelsLikeValueInt° $temperatureScale"
+        ui.todayFeelsLike.text = "$todayFeelsLikeValueInt° $temperatureScale"
+    }
+
+    private fun updatePrecipitationUI() {
+        val settings = getSharedPreferences(NAME_OF_PREFERENCES, 0)
+        val metric = settings.getBoolean("metric", false)
+        val values = ArrayList<BarEntry>()
+        precipitation.forEachIndexed { index, value ->
+            val valueConverted = if (metric) inchesToMillimeters(value) else value
+            values.add(BarEntry(index.toFloat(), valueConverted.toFloat()))
+        }
+        val dataset = BarDataSet(values, "")
+        dataset.color = Color.parseColor(COLD_COLOR);
+        dataset.setDrawValues(false)
+
+        val data = BarData(dataset)
+        ui.precipitationChart.data = data
+        ui.precipitationChart.invalidate() // Redraws the chart.
+    }
+
+    private fun onResponseAPI(response: String) {
+        val weatherData = Gson().fromJson(response, WeatherData::class.java)
+        yesterdayFeelsLikeValue = weatherData.days.first().feelslike
+        todayFeelsLikeValue = weatherData.days.last().feelslike
+        precipitation.clear()
+        for (hour in weatherData.days.last().hours) {
+            precipitation.add(hour.precip)
+        }
+        updateUI()
     }
 
     public override fun onPause() {
@@ -181,8 +264,8 @@ class MainActivity : AppCompatActivity() {
     private fun initializeAds() {
         MobileAds.initialize(this) { }
         adView = AdView(this)
-        binding.adViewContainer.addView(adView)
-        binding.adViewContainer.viewTreeObserver.addOnGlobalLayoutListener {
+        ui.adViewContainer.addView(adView)
+        ui.adViewContainer.viewTreeObserver.addOnGlobalLayoutListener {
             if (!initialLayoutComplete) {
                 initialLayoutComplete = true
                 loadBanner()
@@ -265,5 +348,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun fahrenheitToCelsius(temp: Double): Double {
         return (temp - 32.0) * 5.0 / 9.0
+    }
+
+    private fun inchesToMillimeters(inches: Double): Double {
+        return inches * 25.4
+    }
+
+    private fun millimetersToInches(millimeters: Double): Double {
+        return millimeters / 25.4
     }
 }

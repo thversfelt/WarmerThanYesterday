@@ -8,7 +8,7 @@ data class CurrentConditions (
 	@SerializedName("feelslike") val feelslike : Double,
 	@SerializedName("humidity") val humidity : Double,
 	@SerializedName("dew") val dew : Double,
-	@SerializedName("precip") val precip : Int,
+	@SerializedName("precip") val precip : Double,
 	@SerializedName("precipprob") val precipprob : String,
 	@SerializedName("snow") val snow : String,
 	@SerializedName("snowdepth") val snowdepth : Int,
