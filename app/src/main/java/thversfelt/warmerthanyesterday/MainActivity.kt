@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
+import android.text.format.DateUtils
 import android.util.DisplayMetrics
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -52,6 +53,7 @@ class MainActivity : AppCompatActivity() {
     private val PERMISSIONS_REQUEST_CODE = 999
 
     // Weather-related variables.
+    private var lastUpdateTime = 0L
     private var descriptionText = ""
     private var yesterdayFeelsLikeValue = -1.0
     private var todayFeelsLikeValue = -1.0
@@ -81,8 +83,11 @@ class MainActivity : AppCompatActivity() {
     private fun callAPI() {
         val lat = latitude
         val lon = longitude
-        val today = System.currentTimeMillis() / MILLIS_IN_SECOND
+
+        lastUpdateTime = System.currentTimeMillis()
+        val today = lastUpdateTime / MILLIS_IN_SECOND
         val yesterday = today - SECONDS_IN_DAY
+
         val applicationInfo = applicationContext.packageManager.getApplicationInfo(applicationContext.packageName, PackageManager.GET_META_DATA)
         val key = applicationInfo.metaData["API_KEY"]
 
@@ -90,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         val requestQueue = Volley.newRequestQueue(this)
 
         // Perform the API call.
-        val apiURL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/$lat,$lon/$yesterday/$today?key=$key"
+        val apiURL = "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline/$lat,$lon/$yesterday/$today?key=$key&include=days"
         val apiCall = StringRequest(Request.Method.GET, apiURL, {response -> onResponseAPI(response)}, {})
 
         // Add the api call to the request queue.
@@ -141,13 +146,14 @@ class MainActivity : AppCompatActivity() {
         ui.yesterdayFeelsLike.text = "$yesterdayFeelsLikeValueInt° $temperatureScale"
         ui.todayFeelsLike.text = "$todayFeelsLikeValueInt° $temperatureScale"
         ui.description.text = descriptionText
+        ui.lastUpdate.text = "Last update: " + DateUtils.getRelativeTimeSpanString(lastUpdateTime)
     }
 
     private fun onResponseAPI(response: String) {
         val weatherData = Gson().fromJson(response, WeatherData::class.java)
         yesterdayFeelsLikeValue = weatherData.days.first().feelslike
         todayFeelsLikeValue = weatherData.days.last().feelslike
-        descriptionText = weatherData.description
+        descriptionText = weatherData.days.last().description
         updateUI()
     }
 

@@ -15,28 +15,7 @@
 
         <Space
             android:layout_width="match_parent"
-            android:layout_height="7sp" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Space
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.7" />
-
-            <Switch
-                android:id="@+id/metric_switch"
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.3"
-                android:gravity="center"
-                android:text="metric"
-                android:textColor="@color/text" />
-
-        </LinearLayout>
+            android:layout_height="30sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -51,30 +30,33 @@
             <TextView
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
-                android:layout_weight="0.9"
+                android:layout_weight="0.6"
                 android:gravity="start|center_vertical"
                 android:text="Today will feel"
                 android:textColor="@color/text"
                 android:textSize="24sp" />
 
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/change_feels_like"
+            <Switch
+                android:id="@+id/metric_switch"
                 android:layout_width="0sp"
-                android:layout_height="150sp"
-                android:layout_weight="1"
-                android:clickable="false"
-                android:textColor="@color/light"
-                android:textSize="36sp"
-                app:backgroundTint="#2980B9"
-                app:cornerRadius="0sp" />
+                android:layout_height="match_parent"
+                android:layout_weight="0.3"
+                android:gravity="center"
+                android:text="Metric"
+                android:textColor="@color/text" />
+
         </LinearLayout>
+
+        <Button
+            android:id="@+id/change_feels_like"
+            android:layout_width="match_parent"
+            android:layout_height="150sp"
+            android:clickable="false"
+            android:text="..."
+            android:textColor="@color/text_light"
+            android:textSize="36sp"
+            app:backgroundTint="#2980B9"
+            app:cornerRadius="0sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -85,7 +67,7 @@
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
                 android:layout_weight="0.9"
-                android:gravity="end"
+                android:gravity="end|center_vertical"
                 android:text="than yesterday"
                 android:textColor="@color/text"
                 android:textSize="24sp" />
@@ -103,7 +85,7 @@
         <View
             android:layout_width="match_parent"
             android:layout_height="8sp"
-            android:background="?android:attr/listDivider" />
+            android:background="@color/divider" />
 
         <Space
             android:layout_width="match_parent"
@@ -122,7 +104,7 @@
             <TextView
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
-                android:layout_weight="0.4"
+                android:layout_weight="0.35"
                 android:gravity="start|center_vertical"
                 android:text="Yesterday"
                 android:textColor="@color/text"
@@ -137,9 +119,10 @@
                 android:id="@+id/yesterday_feels_like"
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
-                android:layout_weight="0.4"
+                android:layout_weight="0.35"
                 android:clickable="false"
-                android:textColor="@color/light"
+                android:text="..."
+                android:textColor="@color/text_light"
                 android:textSize="24sp"
                 app:backgroundTint="#E74C3C"
                 app:cornerRadius="10sp" />
@@ -163,7 +146,7 @@
             <TextView
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
-                android:layout_weight="0.4"
+                android:layout_weight="0.35"
                 android:gravity="start|center_vertical"
                 android:text="Today"
                 android:textColor="@color/text"
@@ -178,9 +161,10 @@
                 android:id="@+id/today_feels_like"
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
-                android:layout_weight="0.4"
+                android:layout_weight="0.35"
                 android:clickable="false"
-                android:textColor="@color/light"
+                android:text="..."
+                android:textColor="@color/text_light"
                 android:textSize="24sp"
                 app:backgroundTint="#2980B9"
                 app:cornerRadius="10sp" />
@@ -206,14 +190,20 @@
                 android:layout_height="match_parent"
                 android:layout_weight="0.1" />
 
-            <TextView
+            <Button
                 android:id="@+id/description"
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
                 android:layout_weight="0.8"
-                android:gravity="start|center_vertical"
+                android:clickable="false"
+                android:fontFamily="sans-serif"
+                android:gravity="start"
+                android:text="..."
+                android:textAllCaps="false"
                 android:textColor="@color/text"
-                android:textSize="20sp" />
+                android:textSize="18sp"
+                app:backgroundTint="@color/divider"
+                app:cornerRadius="10sp" />
 
             <Space
                 android:layout_width="0sp"
@@ -222,14 +212,32 @@
 
         </LinearLayout>
 
-        <Space
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="30sp" />
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
 
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="8sp"
-            android:background="?android:attr/listDivider" />
+            <Space
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.12" />
+
+            <TextView
+                android:id="@+id/last_update"
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.76"
+                android:gravity="end|center_vertical"
+                android:text="Last update: ..."
+                android:textColor="@color/text_note"
+                android:textSize="16sp" />
+
+            <Space
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.12" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
