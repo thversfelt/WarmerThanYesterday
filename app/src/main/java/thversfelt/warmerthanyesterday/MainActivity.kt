@@ -193,7 +193,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadBanner() {
-        adView.adUnitId = TEST_AD_UNIT_ID
+        adView.adUnitId = AD_UNIT_ID
         adView.adSize = adSize
         val adRequest = AdRequest.Builder().build()
         adView.loadAd(adRequest)

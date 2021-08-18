@@ -106,57 +106,6 @@
                 android:layout_height="match_parent"
                 android:layout_weight="0.33"
                 android:gravity="start|center_vertical"
-                android:text="Today"
-                android:textColor="@color/text"
-                android:textSize="24sp" />
-
-            <ImageView
-                android:id="@+id/today_icon"
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.1"
-                android:adjustViewBounds="true"
-                android:cropToPadding="true" />
-
-            <Space
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.02" />
-
-            <Button
-                android:id="@+id/today_feels_like"
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.35"
-                android:clickable="false"
-                android:text="..."
-                android:textColor="@color/text_light"
-                android:textSize="24sp"
-                app:backgroundTint="#2980B9"
-                app:cornerRadius="10sp" />
-
-            <Space
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.1" />
-
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <Space
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.1" />
-
-            <TextView
-                android:layout_width="0sp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.33"
-                android:gravity="start|center_vertical"
                 android:text="Yesterday"
                 android:textColor="@color/text"
                 android:textSize="24sp" />
@@ -191,6 +140,59 @@
                 android:layout_width="0sp"
                 android:layout_height="match_parent"
                 android:layout_weight="0.1" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <Space
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.1" />
+
+            <TextView
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.33"
+                android:gravity="start|center_vertical"
+                android:text="Today"
+                android:textColor="@color/text"
+                android:textSize="24sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/today_icon"
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.1"
+                android:adjustViewBounds="true"
+                android:cropToPadding="true" />
+
+            <Space
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.02" />
+
+            <Button
+                android:id="@+id/today_feels_like"
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.35"
+                android:clickable="false"
+                android:text="..."
+                android:textColor="@color/text_light"
+                android:textSize="24sp"
+                android:textStyle="bold"
+                app:backgroundTint="#2980B9"
+                app:cornerRadius="10sp" />
+
+            <Space
+                android:layout_width="0sp"
+                android:layout_height="match_parent"
+                android:layout_weight="0.1" />
+
         </LinearLayout>
 
         <Space
