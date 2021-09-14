@@ -155,8 +155,8 @@ class MainActivity : AppCompatActivity() {
     private fun onResponseAPI(response: String) {
         val weatherData = Gson().fromJson(response, WeatherData::class.java)
 
-        yesterdayFeelsLikeValue = weatherData.days.first().feelslike
-        todayFeelsLikeValue = weatherData.days.last().feelslike
+        yesterdayFeelsLikeValue = weatherData.days.first().feelslikemax
+        todayFeelsLikeValue = weatherData.days.last().feelslikemax
         descriptionText = weatherData.days.last().description
         yesterdayIcon = weatherData.days.first().icon.replace('-', '_')
         todayIcon = weatherData.days.last().icon.replace('-', '_')
