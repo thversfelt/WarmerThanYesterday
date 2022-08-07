@@ -23,24 +23,7 @@ class MainActivity : AppCompatActivity() {
     // Ad-related variables.
     private val TEST_AD_UNIT_ID = "ca-app-pub-3940256099942544/6300978111"
     private val AD_UNIT_ID = "ca-app-pub-3934499255955132/7364274492"
-    private lateinit var adView: AdView
     private var initialLayoutComplete = false
-    private val adSize: AdSize
-        get() {
-            val display = windowManager.defaultDisplay
-            val outMetrics = DisplayMetrics()
-            display.getMetrics(outMetrics)
-
-            val density = outMetrics.density
-
-            var adWidthPixels = ui.adViewContainer.width.toFloat()
-            if (adWidthPixels == 0f) {
-                adWidthPixels = outMetrics.widthPixels.toFloat()
-            }
-
-            val adWidth = (adWidthPixels / density).toInt()
-            return AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(this, adWidth)
-        }
 
     // Location-related variables.
     private lateinit var locationProvider: FusedLocationProviderClient
@@ -89,8 +72,7 @@ class MainActivity : AppCompatActivity() {
         val today = System.currentTimeMillis() / MILLIS_IN_SECOND
         val yesterday = today - SECONDS_IN_DAY
 
-        val applicationInfo = applicationContext.packageManager.getApplicationInfo(applicationContext.packageName, PackageManager.GET_META_DATA)
-        val key = applicationInfo.metaData["API_KEY"]
+        val key = getString(R.string.openweathermap_api_key);
 
         // Instantiate the request queue.
         val requestQueue = Volley.newRequestQueue(this)
@@ -165,24 +147,10 @@ class MainActivity : AppCompatActivity() {
         updateUI()
     }
 
-    public override fun onPause() {
-        adView.pause()
-        super.onPause()
-    }
-
-    public override fun onResume() {
-        super.onResume()
-        adView.resume()
-    }
-
-    public override fun onDestroy() {
-        adView.destroy()
-        super.onDestroy()
-    }
-
     private fun initializeAds() {
         MobileAds.initialize(this) { }
-        adView = AdView(this)
+
+        val adView = AdView(this)
         adView.setAdSize(AdSize.BANNER)
         adView.adUnitId = TEST_AD_UNIT_ID
 
@@ -190,14 +158,10 @@ class MainActivity : AppCompatActivity() {
         ui.adViewContainer.viewTreeObserver.addOnGlobalLayoutListener {
             if (!initialLayoutComplete) {
                 initialLayoutComplete = true
-                loadBanner()
+                val adRequest = AdRequest.Builder().build()
+                adView.loadAd(adRequest)
             }
         }
-    }
-
-    private fun loadBanner() {
-        val adRequest = AdRequest.Builder().build()
-        adView.loadAd(adRequest)
     }
 
     private fun initializeLocation() {
