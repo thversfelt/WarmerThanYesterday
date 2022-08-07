@@ -183,6 +183,9 @@ class MainActivity : AppCompatActivity() {
     private fun initializeAds() {
         MobileAds.initialize(this) { }
         adView = AdView(this)
+        adView.setAdSize(AdSize.BANNER)
+        adView.adUnitId = TEST_AD_UNIT_ID
+
         ui.adViewContainer.addView(adView)
         ui.adViewContainer.viewTreeObserver.addOnGlobalLayoutListener {
             if (!initialLayoutComplete) {
@@ -193,8 +196,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun loadBanner() {
-        adView.adUnitId = AD_UNIT_ID
-        adView.adSize = adSize
         val adRequest = AdRequest.Builder().build()
         adView.loadAd(adRequest)
     }
