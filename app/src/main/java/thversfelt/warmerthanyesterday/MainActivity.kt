@@ -1,12 +1,13 @@
 package thversfelt.warmerthanyesterday
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
+import android.text.Html
 import android.text.format.DateUtils
-import android.util.DisplayMetrics
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.android.volley.Request
@@ -61,8 +62,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(ui.root)
 
         initializeUI()
+        initializeFunctionality()
         initializeAds()
-        initializeLocation()
     }
 
     private fun callAPI() {
@@ -72,7 +73,7 @@ class MainActivity : AppCompatActivity() {
         val today = System.currentTimeMillis() / MILLIS_IN_SECOND
         val yesterday = today - SECONDS_IN_DAY
 
-        val key = getString(R.string.openweathermap_api_key);
+        val key = getString(R.string.visual_crossing_api_key);
 
         // Instantiate the request queue.
         val requestQueue = Volley.newRequestQueue(this)
@@ -88,11 +89,11 @@ class MainActivity : AppCompatActivity() {
     private fun initializeUI() {
         supportActionBar?.hide() // Hide the action bar.
 
-        val settings = getSharedPreferences(NAME_OF_PREFERENCES, 0)
-        val metric = settings.getBoolean("metric", false)
+        val preferences = getSharedPreferences(NAME_OF_PREFERENCES, 0)
+        val metric = preferences.getBoolean("metric", false)
         if (metric) ui.metricSwitch.isChecked = true
         ui.metricSwitch.setOnCheckedChangeListener { _, isChecked ->
-            val editor = settings.edit()
+            val editor = preferences.edit()
             editor.putBoolean("metric", isChecked)
             editor.apply()
             if (todayFeelsLikeValue >= 0 && yesterdayFeelsLikeValue >= 0) updateUI()
@@ -100,8 +101,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateUI() {
-        val settings = getSharedPreferences(NAME_OF_PREFERENCES, 0)
-        val metric = settings.getBoolean("metric", false)
+        val preferences = getSharedPreferences(NAME_OF_PREFERENCES, 0)
+        val metric = preferences.getBoolean("metric", false)
         val temperatureScale = if (metric) "C" else "F"
 
         val yesterdayFeelsLikeValueConverted = if (metric) fahrenheitToCelsius(yesterdayFeelsLikeValue) else yesterdayFeelsLikeValue
@@ -164,23 +165,36 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun initializeLocation() {
-        locationProvider = LocationServices.getFusedLocationProviderClient(this)
-        locationRequest = LocationRequest.create()
-        locationRequest.priority = LocationRequest.PRIORITY_HIGH_ACCURACY
-        locationRequest.interval = 10 * 1000
-        locationRequest.fastestInterval = 5 * 1000
-        locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                for (location in locationResult.locations) {
-                    if (location != null) {
-                        getLocation()
-                        locationProvider.removeLocationUpdates(locationCallback)
-                    }
-                }
+    private fun initializeFunctionality() {
+        val preferences = getSharedPreferences(NAME_OF_PREFERENCES, 0)
+        val consent = preferences.getBoolean("consent", false)
+
+        if (!consent) {
+            // Build and show the consent dialog.
+            val builder = AlertDialog.Builder(this)
+            builder.setTitle("Privacy Policy")
+            builder.setMessage(Html.fromHtml("By clicking 'Accept', you agree to our <a href=https://pages.flycricket.io/warmer-than-yesterda/privacy.html>Privacy Policy</a>"))
+            builder.setPositiveButton("Accept") { _, _ ->
+                // Save the consent to shared preferences.
+                val editor = preferences.edit()
+                editor.putBoolean("consent", true)
+                editor.apply()
+
+                // Get the location.
+                locationProvider = LocationServices.getFusedLocationProviderClient(this)
+                getLocation()
             }
+            builder.setNegativeButton("Decline") { _, _ ->
+                // Do nothing.
+            }
+            val dialog: AlertDialog = builder.create()
+            dialog.show()
         }
-        getLocation()
+        else {
+            // Get the location.
+            locationProvider = LocationServices.getFusedLocationProviderClient(this)
+            getLocation()
+        }
     }
 
     private fun getLocation() {
@@ -216,16 +230,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        when (requestCode) {
-            PERMISSIONS_REQUEST_CODE -> {
-                // If request is cancelled, the result arrays are empty.
-                if ((grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    // Permissions are granted.
-                    getLocation()
-                } else {
-                    // Permissions are denied by user.
-                }
-            }
+        if (requestCode == PERMISSIONS_REQUEST_CODE &&
+            grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED)
+        {
+            // Permissions are granted.
+            getLocation()
+        } else {
+            // Permissions are denied by user.
         }
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
     }
